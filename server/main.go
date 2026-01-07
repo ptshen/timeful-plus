@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -87,8 +88,24 @@ func main() {
 	router.Use(gin.Recovery())
 
 	// Cors
+	// Get allowed origins from environment variable or use defaults
+	allowedOrigins := []string{"http://localhost:3002", "http://localhost:8080"}
+	if envOrigins := os.Getenv("CORS_ALLOWED_ORIGINS"); envOrigins != "" {
+		// Split by comma and trim spaces
+		for _, origin := range strings.Split(envOrigins, ",") {
+			trimmedOrigin := strings.TrimSpace(origin)
+			if trimmedOrigin != "" {
+				allowedOrigins = append(allowedOrigins, trimmedOrigin)
+			}
+		}
+		logger.StdOut.Printf("CORS: Added custom origins from CORS_ALLOWED_ORIGINS: %v\n", envOrigins)
+	} else {
+		// Add production domains if not using custom origins
+		allowedOrigins = append(allowedOrigins, "https://www.schej.it", "https://schej.it", "https://www.timeful.app", "https://timeful.app")
+	}
+	
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:8080", "https://www.schej.it", "https://schej.it", "https://www.timeful.app", "https://timeful.app"},
+		AllowOrigins:     allowedOrigins,
 		AllowMethods:     []string{"GET", "POST", "PATCH", "PUT", "DELETE"},
 		AllowHeaders:     []string{"Content-Type"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -118,20 +135,37 @@ func main() {
 	routes.InitFolders(apiRouter)
 	slackbot.InitSlackbot(apiRouter)
 
-	err = filepath.WalkDir("../frontend/dist", func(path string, d fs.DirEntry, err error) error {
-		if !d.IsDir() && d.Name() != "index.html" {
-			split := splitPath(path)
-			newPath := filepath.Join(split[3:]...)
-			router.StaticFile(fmt.Sprintf("/%s", newPath), path)
+	// Serve frontend static files only if the directory exists
+	// In Docker deployments with separated containers, frontend is served by Nginx
+	frontendDistPath := "../frontend/dist"
+	if _, err := os.Stat(frontendDistPath); err == nil {
+		// Frontend dist directory exists, serve static files
+		err = filepath.WalkDir(frontendDistPath, func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if !d.IsDir() && d.Name() != "index.html" {
+				split := splitPath(path)
+				newPath := filepath.Join(split[3:]...)
+				router.StaticFile(fmt.Sprintf("/%s", newPath), path)
+			}
+			return nil
+		})
+		if err != nil {
+			log.Fatalf("failed to walk directories: %s", err)
 		}
-		return nil
-	})
-	if err != nil {
-		log.Fatalf("failed to walk directories: %s", err)
-	}
 
-	router.LoadHTMLFiles("../frontend/dist/index.html")
-	router.NoRoute(noRouteHandler())
+		router.LoadHTMLFiles("../frontend/dist/index.html")
+		router.NoRoute(noRouteHandler())
+		logger.StdOut.Println("Frontend static files loaded from ../frontend/dist")
+	} else {
+		// Frontend not found, likely running in separated container mode
+		logger.StdOut.Println("Frontend directory not found, skipping static file serving (expected in separated container deployments)")
+		// In separated container mode, only serve API routes
+		router.NoRoute(func(c *gin.Context) {
+			c.JSON(404, gin.H{"error": "Not found. This is the API server - frontend is served separately."})
+		})
+	}
 
 	// Init swagger documentation
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
@@ -148,7 +182,9 @@ func loadDotEnv() {
 	stripe.Key = os.Getenv("STRIPE_API_KEY")
 
 	if err != nil {
-		logger.StdErr.Panicln("Error loading .env file")
+		// In Docker or production environments, .env file might not exist
+		// Environment variables should be set directly
+		logger.StdOut.Println("No .env file found, using environment variables directly")
 	}
 }
 

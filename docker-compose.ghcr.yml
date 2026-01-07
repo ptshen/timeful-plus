@@ -1,0 +1,114 @@
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:6.0
+    container_name: timeful-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: schej-it
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    networks:
+      - timeful-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API Server
+  backend:
+    image: ghcr.io/lillenne/timeful.app/backend:latest
+    container_name: timeful-backend
+    restart: unless-stopped
+    expose:
+      - "3002"
+    environment:
+      # MongoDB Configuration
+      - MONGO_URI=mongodb://mongodb:27017
+      - MONGO_DB_NAME=schej-it
+      
+      # Google OAuth (Optional - for calendar integration)
+      # Create credentials at https://console.cloud.google.com/
+      - CLIENT_ID=${CLIENT_ID:-}
+      - CLIENT_SECRET=${CLIENT_SECRET:-}
+      
+      # Encryption (Required)
+      # Generate with: openssl rand -base64 32
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      
+      # Optional: Email Configuration (for notifications)
+      - GMAIL_APP_PASSWORD=${GMAIL_APP_PASSWORD:-}
+      - SCHEJ_EMAIL_ADDRESS=${SCHEJ_EMAIL_ADDRESS:-}
+      
+      # Optional: Listmonk Configuration (for email campaigns)
+      - LISTMONK_URL=${LISTMONK_URL:-}
+      - LISTMONK_USERNAME=${LISTMONK_USERNAME:-}
+      - LISTMONK_PASSWORD=${LISTMONK_PASSWORD:-}
+      - LISTMONK_LIST_ID=${LISTMONK_LIST_ID:-}
+      
+      # Optional: Slack Configuration (for monitoring)
+      - SLACK_DEV_WEBHOOK_URL=${SLACK_DEV_WEBHOOK_URL:-}
+      - SLACK_PROD_WEBHOOK_URL=${SLACK_PROD_WEBHOOK_URL:-}
+      
+      # Optional: Stripe Configuration (for payments)
+      - STRIPE_API_KEY=${STRIPE_API_KEY:-}
+      
+      # Optional: Google Cloud Service Account (for advanced features)
+      - SERVICE_ACCOUNT_KEY_PATH=${SERVICE_ACCOUNT_KEY_PATH:-}
+      
+      # Optional: Base URL (IMPORTANT for Google OAuth with custom domains)
+      # Set this to your domain if hosting at a custom URL
+      # Example: https://yourdomain.com or http://localhost:3002
+      - BASE_URL=${BASE_URL:-}
+      
+      # Optional: CORS Configuration (for custom domains)
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-}
+      
+      # Server Configuration
+      - GIN_MODE=release
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - timeful-network
+    volumes:
+      # Mount logs directory to persist logs
+      - backend_logs:/app/logs
+
+  # Frontend Web Server
+  frontend:
+    image: ghcr.io/lillenne/timeful.app/frontend:latest
+    container_name: timeful-frontend
+    restart: unless-stopped
+    ports:
+      - "3002:80"
+    depends_on:
+      - backend
+    networks:
+      - timeful-network
+    environment:
+      # Backend host and port for nginx proxy configuration
+      # These are substituted into nginx.conf at startup
+      # Default values work with Docker Compose networking
+      # Change these if using custom container names or external backend
+      - BACKEND_HOST=${BACKEND_HOST:-backend}
+      - BACKEND_PORT=${BACKEND_PORT:-3002}
+    volumes:
+      # Mount runtime configuration
+      - ./config.js:/usr/share/nginx/html/config.js
+
+networks:
+  timeful-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+  backend_logs:
+    driver: local
