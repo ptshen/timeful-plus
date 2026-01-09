@@ -98,6 +98,7 @@
                   @scheduleEvent="scheduleEvent"
                   @cancelScheduleEvent="cancelScheduleEvent"
                   @confirmScheduleEvent="confirmScheduleEvent"
+                  @downloadICS="downloadScheduledEventICS"
                 />
               </div>
             </template>
@@ -499,6 +500,7 @@
                   @scheduleEvent="scheduleEvent"
                   @cancelScheduleEvent="cancelScheduleEvent"
                   @confirmScheduleEvent="confirmScheduleEvent"
+                  @downloadICS="downloadScheduledEventICS"
                 />
               </div>
 
@@ -854,6 +856,7 @@
           @scheduleEvent="scheduleEvent"
           @cancelScheduleEvent="cancelScheduleEvent"
           @confirmScheduleEvent="confirmScheduleEvent"
+          @downloadICS="downloadScheduledEventICS"
         />
 
         <!-- Fixed bottom section for mobile -->
@@ -1025,6 +1028,7 @@ import {
   timeslotDurations,
   upgradeDialogTypes,
 } from "@/constants"
+import { createICSFile, downloadICSFile, createMailtoWithICS } from "@/utils/ics_utils"
 import { mapMutations, mapActions, mapState } from "vuex"
 import UserAvatarContent from "@/components/UserAvatarContent.vue"
 import CalendarAccounts from "@/components/settings/CalendarAccounts.vue"
@@ -2757,18 +2761,63 @@ export default {
       this.availability = new Set()
       const tmpAvailability = this.getAvailabilityFromCalendarEvents({
         calendarEventsByDay: this.calendarEventsByDay,
-        calendarOptions: {
-          bufferTime: this.bufferTime,
-          workingHours: this.workingHours,
-        },
+        calendarOptions: this.getCurrentCalendarOptions(),
       })
 
+      this.animateAvailabilityForCurrentPage(tmpAvailability)
+    },
+    /** Set availability from ICS imported events */
+    setAvailabilityFromICSEvents(events) {
+      // Convert ICS events to calendarEventsByDay format
+      const calendarEventsByDay = []
+      
+      for (let i = 0; i < this.allDays.length; ++i) {
+        const day = this.allDays[i]
+        const dayStart = day.dateObject
+        const dayEnd = new Date(dayStart)
+        dayEnd.setHours(23, 59, 59, 999)
+
+        // Filter events that occur on this day
+        const dayEvents = events.filter((event) => {
+          const eventStart = new Date(event.startDate)
+          const eventEnd = new Date(event.endDate)
+          
+          // Check if event overlaps with this day
+          return eventStart <= dayEnd && eventEnd >= dayStart
+        }).map((event) => ({
+          startDate: new Date(event.startDate),
+          endDate: new Date(event.endDate),
+          free: false,
+          summary: event.summary || "Busy",
+        }))
+
+        calendarEventsByDay[i] = dayEvents
+      }
+
+      // Calculate availability from these events
+      this.availability = new Set()
+      const tmpAvailability = this.getAvailabilityFromCalendarEvents({
+        calendarEventsByDay,
+        calendarOptions: this.getCurrentCalendarOptions(),
+      })
+
+      this.animateAvailabilityForCurrentPage(tmpAvailability)
+    },
+    /** Get current calendar options */
+    getCurrentCalendarOptions() {
+      return {
+        bufferTime: this.bufferTime,
+        workingHours: this.workingHours,
+      }
+    },
+    /** Animate availability for the current page */
+    animateAvailabilityForCurrentPage(availability) {
       const pageStartDate = getDateDayOffset(
         new Date(this.event.dates[0]),
         this.page * this.maxDaysPerPage
       )
       const pageEndDate = getDateDayOffset(pageStartDate, this.maxDaysPerPage)
-      this.animateAvailability(tmpAvailability, pageStartDate, pageEndDate)
+      this.animateAvailability(availability, pageStartDate, pageEndDate)
     },
     /** Animate the filling out of availability using setTimeout, between startDate and endDate */
     animateAvailability(availability, startDate, endDate) {
@@ -3565,6 +3614,68 @@ export default {
 
       // Navigate to url and reset state
       window.open(url, "_blank")
+      this.state = this.defaultState
+    },
+    
+    /** Download ICS file for the scheduled event */
+    downloadScheduledEventICS() {
+      if (!this.curScheduledEvent) return
+
+      this.$posthog.capture("schedule_event_ics_download")
+      
+      // Get start date, and end date from the area that the user has dragged out
+      const { col, row, numRows } = this.curScheduledEvent
+      let startDate = this.getDateFromRowCol(row, col)
+      let endDate = new Date(startDate)
+      endDate.setMinutes(
+        startDate.getMinutes() + this.timeslotDuration * numRows
+      )
+
+      if (this.isWeekly || this.isGroup) {
+        // Determine offset based on current day of the week.
+        let offset = 0
+        if (this.isGroup) {
+          offset = this.weekOffset
+        } else if (this.isWeekly) {
+          if (new Date().getDay() > startDate.getDay()) {
+            offset = 1
+          }
+        }
+
+        // Transform startDate and endDate to be the current week offset
+        startDate = dateToDowDate(this.event.dates, startDate, offset, true)
+        endDate = dateToDowDate(this.event.dates, endDate, offset, true)
+      }
+
+      // Format email list
+      const emails = this.respondents
+        .map((r) => (r.email.length > 0 ? r.email : null))
+        .filter(Boolean)
+
+      const eventId = this.event.shortId ?? this.event._id
+
+      // Create ICS file content
+      const icsContent = createICSFile({
+        title: this.event.name,
+        startDate,
+        endDate,
+        description: `\n\nThis event was scheduled with Timeful: https://timeful.app/e/${eventId}`,
+        location: this.event.location || "",
+        attendees: emails,
+      })
+
+      // Download the ICS file
+      const filename = `${this.event.name.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_').trim()}.ics`
+      downloadICSFile(icsContent, filename)
+
+      this.$posthog.capture("schedule_event_ics_downloaded")
+
+      // Show success message
+      if (this.showSnackbar) {
+        this.showInfo("Event downloaded as ICS file! You can now attach it to an email or add it to your calendar.")
+      }
+
+      // Reset state
       this.state = this.defaultState
     },
     //#endregion
