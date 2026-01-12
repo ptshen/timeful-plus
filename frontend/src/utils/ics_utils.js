@@ -3,6 +3,12 @@
  */
 
 import ICAL from "ical.js"
+import dayjs from "dayjs"
+import utc from "dayjs/plugin/utc"
+import timezone from "dayjs/plugin/timezone"
+
+dayjs.extend(utc)
+dayjs.extend(timezone)
 
 /**
  * Parse ICS file content and extract calendar events
@@ -131,13 +137,39 @@ export function createICSFile(eventDetails) {
   event.location = location || ""
   
   // Set start and end times with timezone
-  // fromJSDate with false parameter creates a UTC time
-  event.startDate = ICAL.Time.fromJSDate(startDate, false)
-  event.endDate = ICAL.Time.fromJSDate(endDate, false)
-  
-  // If timezone is provided, set the TZID parameter on the date-time properties
   if (timezone) {
-    // Get the DTSTART and DTEND properties to set TZID
+    // When timezone is provided, we need to create local time values (not UTC)
+    // The incoming dates are UTC times that represent the correct moment
+    // We convert them to local time in the specified timezone for the ICS file
+    
+    const localStart = dayjs(startDate).tz(timezone)
+    const localEnd = dayjs(endDate).tz(timezone)
+    
+    // Create ICAL.Time as local time (not UTC)
+    const startTime = new ICAL.Time({
+      year: localStart.year(),
+      month: localStart.month() + 1, // dayjs months are 0-indexed, ICAL months are 1-indexed
+      day: localStart.date(),
+      hour: localStart.hour(),
+      minute: localStart.minute(),
+      second: localStart.second(),
+      isDate: false
+    })
+    
+    const endTime = new ICAL.Time({
+      year: localEnd.year(),
+      month: localEnd.month() + 1,
+      day: localEnd.date(),
+      hour: localEnd.hour(),
+      minute: localEnd.minute(),
+      second: localEnd.second(),
+      isDate: false
+    })
+    
+    event.startDate = startTime
+    event.endDate = endTime
+    
+    // Set the TZID parameter on the date-time properties
     const dtstart = vevent.getFirstProperty("dtstart")
     const dtend = vevent.getFirstProperty("dtend")
     
@@ -147,6 +179,10 @@ export function createICSFile(eventDetails) {
     if (dtend) {
       dtend.setParameter("tzid", timezone)
     }
+  } else {
+    // No timezone provided, use UTC times
+    event.startDate = ICAL.Time.fromJSDate(startDate, false)
+    event.endDate = ICAL.Time.fromJSDate(endDate, false)
   }
 
   // Generate UID using crypto API if available, fallback to timestamp + random
