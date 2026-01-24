@@ -12,14 +12,14 @@
           <template v-if="curRespondents.length === 0">
             {{
               isCurTimeslotSelected
-                ? `(${numUsersAvailable}/${respondents.length})`
+                ? `(${numUsersAvailable}/${capacityDenominator})`
                 : `(${respondents.length})`
             }}
           </template>
           <template v-else>
             {{
               isCurTimeslotSelected
-                ? `(${numCurRespondentsAvailable}/${curRespondents.length})`
+                ? `(${numCurRespondentsAvailable}/${curRespondentsCapacityDenominator})`
                 : `(${curRespondents.length})`
             }}
           </template>
@@ -525,6 +525,26 @@ export default {
           numUsers++
       }
       return numUsers
+    },
+    /** Returns the denominator for capacity display (capacity limit if set, otherwise total respondents) */
+    capacityDenominator() {
+      if (
+        this.event.maxCapacityPerSlot &&
+        this.event.maxCapacityPerSlot > 0
+      ) {
+        return this.event.maxCapacityPerSlot
+      }
+      return this.respondents.length
+    },
+    /** Returns the denominator for capacity display when showing subset (capacity limit if set, otherwise curRespondents length) */
+    curRespondentsCapacityDenominator() {
+      if (
+        this.event.maxCapacityPerSlot &&
+        this.event.maxCapacityPerSlot > 0
+      ) {
+        return this.event.maxCapacityPerSlot
+      }
+      return this.curRespondents.length
     },
     pendingUsers() {
       if (!this.isGroup) return []

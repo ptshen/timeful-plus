@@ -291,6 +291,37 @@
                   :items="timeIncrementItems"
                 ></v-select>
               </div>
+              <div class="tw-flex tw-items-center tw-gap-x-2">
+                <v-checkbox
+                  v-model="capacityLimitEnabled"
+                  hide-details
+                  class="tw-mt-0 tw-pt-0"
+                >
+                  <template v-slot:label>
+                    <div
+                      :class="!capacityLimitEnabled && 'tw-opacity-50'"
+                      class="tw-flex tw-items-center tw-gap-x-2 tw-text-sm tw-text-black"
+                    >
+                      <div>Max people per time slot:</div>
+                      <v-text-field
+                        v-model="maxCapacityPerSlot"
+                        @click="
+                          (e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                          }
+                        "
+                        :disabled="!capacityLimitEnabled"
+                        dense
+                        class="capacity-text-field -tw-mt-[2px] tw-w-12"
+                        hide-details
+                        type="number"
+                        min="1"
+                      ></v-text-field>
+                    </div>
+                  </template>
+                </v-checkbox>
+              </div>
               <v-checkbox
                 v-if="!guestEvent && authUser"
                 v-model="notificationsEnabled"
@@ -481,6 +512,9 @@
 .email-me-after-text-field input {
   padding: 0px !important;
 }
+.capacity-text-field input {
+  padding: 0px !important;
+}
 </style>
 
 <script>
@@ -580,12 +614,14 @@ export default {
 
     // Advanced options
     showAdvancedOptions: false,
-    timeIncrement: 15,
+    timeIncrement: 60,
     collectEmails: false,
     blindAvailabilityEnabled: false,
     timezone: {},
     sendEmailAfterXResponsesEnabled: false,
     sendEmailAfterXResponses: 3,
+    capacityLimitEnabled: false,
+    maxCapacityPerSlot: 4,
 
     helpDialog: false,
 
@@ -697,6 +733,8 @@ export default {
       this.sendEmailAfterXResponsesEnabled = false
       this.sendEmailAfterXResponses = 3
       this.collectEmails = false
+      this.capacityLimitEnabled = false
+      this.maxCapacityPerSlot = 4
       this.startOnMonday = prefersStartOnMonday()
 
       this.$refs.form.resetValidation()
@@ -785,6 +823,9 @@ export default {
         collectEmails: this.collectEmails,
         startOnMonday: this.startOnMonday,
         timeIncrement: this.timeIncrement,
+        maxCapacityPerSlot: this.capacityLimitEnabled
+          ? parseInt(this.maxCapacityPerSlot)
+          : null,
         creatorPosthogId: this.$posthog?.get_distinct_id(),
       }
 
@@ -939,6 +980,14 @@ export default {
         ) {
           this.sendEmailAfterXResponsesEnabled = true
           this.sendEmailAfterXResponses = this.event.sendEmailAfterXResponses
+        }
+
+        if (
+          this.event.maxCapacityPerSlot !== null &&
+          this.event.maxCapacityPerSlot > 0
+        ) {
+          this.capacityLimitEnabled = true
+          this.maxCapacityPerSlot = this.event.maxCapacityPerSlot
         }
 
         if (this.event.daysOnly) {

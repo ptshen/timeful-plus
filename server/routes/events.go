@@ -56,6 +56,7 @@ type CreateEventRequest struct {
 	When2meetHref            *string  `json:"when2meetHref"`
 	CollectEmails            *bool    `json:"collectEmails"`
 	TimeIncrement            *int     `json:"timeIncrement"`
+	MaxCapacityPerSlot       *int     `json:"maxCapacityPerSlot"`
 
 	// Only for availability groups
 	Attendees []string `json:"attendees"`
@@ -88,6 +89,7 @@ type EditEventRequest struct {
 	Remindees                []string `json:"remindees"`
 	SendEmailAfterXResponses *int     `json:"sendEmailAfterXResponses"`
 	CollectEmails            *bool    `json:"collectEmails"`
+	MaxCapacityPerSlot       *int     `json:"maxCapacityPerSlot"`
 
 	// Only for availability groups
 	Attendees []string `json:"attendees"`
@@ -172,6 +174,7 @@ func createEvent(c *gin.Context) {
 		When2meetHref:            payload.When2meetHref,
 		CollectEmails:            payload.CollectEmails,
 		TimeIncrement:            payload.TimeIncrement,
+		MaxCapacityPerSlot:       payload.MaxCapacityPerSlot,
 		Type:                     payload.Type,
 		SignUpResponses:          make(map[string]*models.SignUpResponse),
 		NumResponses:             &numResponses,
@@ -345,6 +348,7 @@ func editEvent(c *gin.Context) {
 	event.DaysOnly = payload.DaysOnly
 	event.SendEmailAfterXResponses = payload.SendEmailAfterXResponses
 	event.CollectEmails = payload.CollectEmails
+	event.MaxCapacityPerSlot = payload.MaxCapacityPerSlot
 	event.Type = payload.Type
 
 	// Update remindees
@@ -747,8 +751,52 @@ func updateEventResponse(c *gin.Context) {
 		}
 
 		// Check if user has responded to event before (edit response) or not (new response)
-		idx, _ := findResponse(eventResponses, userIdString)
+		idx, existingUserResponse := findResponse(eventResponses, userIdString)
 		userHasResponded = idx != -1
+
+		// Check capacity limits if maxCapacityPerSlot is set
+		if event.MaxCapacityPerSlot != nil && *event.MaxCapacityPerSlot > 0 {
+			maxCapacity := *event.MaxCapacityPerSlot
+
+			// Build a map of existing user's timestamps (to allow them to keep their spots)
+			existingUserTimestamps := make(map[int64]bool)
+			if existingUserResponse != nil {
+				for _, ts := range existingUserResponse.Availability {
+					existingUserTimestamps[ts.Time().UnixMilli()] = true
+				}
+			}
+
+			// Count responses per timestamp (excluding current user's existing response)
+			slotCounts := make(map[int64]int)
+			for _, eventResponse := range eventResponses {
+				if eventResponse.UserId == userIdString {
+					continue // Skip current user's existing response
+				}
+				for _, ts := range eventResponse.Response.Availability {
+					slotCounts[ts.Time().UnixMilli()]++
+				}
+			}
+
+			// Check if any new timestamps would exceed capacity
+			blockedTimestamps := make([]primitive.DateTime, 0)
+			for _, ts := range payload.Availability {
+				timestamp := ts.Time().UnixMilli()
+				// Only check capacity for slots where user wasn't already marked available
+				if !existingUserTimestamps[timestamp] {
+					if slotCounts[timestamp] >= maxCapacity {
+						blockedTimestamps = append(blockedTimestamps, ts)
+					}
+				}
+			}
+
+			if len(blockedTimestamps) > 0 {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"error":             "Some time slots are at capacity",
+					"blockedTimestamps": blockedTimestamps,
+				})
+				return
+			}
+		}
 
 		// Update event responses
 		if userHasResponded {

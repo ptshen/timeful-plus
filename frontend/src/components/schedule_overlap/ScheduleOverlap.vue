@@ -2349,6 +2349,35 @@ export default {
     //#endregion
 
     // -----------------------------------
+    //#region Capacity
+    // -----------------------------------
+    /** Returns true if the slot at the given date is at capacity */
+    isSlotAtCapacity(date) {
+      if (!date) return false
+      if (!this.event.maxCapacityPerSlot || this.event.maxCapacityPerSlot <= 0) {
+        return false
+      }
+      const timeslotRespondents =
+        this.responsesFormatted.get(date.getTime()) ?? new Set()
+      // If the current user is already in this slot, don't count them towards capacity
+      // (they should be able to keep their spot)
+      const currentUserId = this.authUser?._id ?? this.curGuestId
+      const isCurrentUserInSlot = currentUserId && timeslotRespondents.has(currentUserId)
+      const effectiveCount = isCurrentUserInSlot
+        ? timeslotRespondents.size - 1
+        : timeslotRespondents.size
+      return effectiveCount >= this.event.maxCapacityPerSlot
+    },
+    /** Returns the count of respondents for a slot, excluding current user if they're already in it */
+    getSlotCount(date) {
+      if (!date) return 0
+      const timeslotRespondents =
+        this.responsesFormatted.get(date.getTime()) ?? new Set()
+      return timeslotRespondents.size
+    },
+    //#endregion
+
+    // -----------------------------------
     //#region Respondent
     // -----------------------------------
     mouseOverRespondent(e, id) {
@@ -3140,9 +3169,14 @@ export default {
         // Set default background color to red (unavailable)
         s.backgroundColor = "#E523230D"
 
+        // Check if slot is at capacity (only in edit availability mode)
+        const isAtCapacity =
+          this.state === this.states.EDIT_AVAILABILITY &&
+          this.isSlotAtCapacity(date)
+
         // Show only current user availability
         const inDragRange = this.inDragRange(row, col)
-        if (inDragRange) {
+        if (inDragRange && !isAtCapacity) {
           // Set style if drag range goes over the current timeslot
           if (this.dragType === this.DRAG_TYPES.ADD) {
             if (this.state === this.states.SET_SPECIFIC_TIMES) {
@@ -3175,6 +3209,10 @@ export default {
               s.backgroundColor = "#00994C77"
             } else if (this.ifNeeded.has(date.getTime())) {
               c += "tw-bg-yellow "
+            } else if (isAtCapacity) {
+              // Show full slot indicator (grayed out)
+              s.backgroundColor = "#9CA3AF33" // gray-400 with transparency
+              c += "tw-cursor-not-allowed "
             }
           }
         }
@@ -3421,11 +3459,20 @@ export default {
                   } else {
                     dateFormat = "ddd"
                   }
-                  this.tooltipContent = `${startDate.format(
+                  let tooltip = `${startDate.format(
                     dateFormat
                   )} ${startDate.format(timeFormat)} to ${endDate.format(
                     timeFormat
                   )}`
+                  // Add "Slot is full" if editing and slot is at capacity
+                  const originalDate = this.getDateFromRowCol(row, col)
+                  if (
+                    this.state === this.states.EDIT_AVAILABILITY &&
+                    this.isSlotAtCapacity(originalDate)
+                  ) {
+                    tooltip += " (Slot is full)"
+                  }
+                  this.tooltipContent = tooltip
                 }
               }
             }
@@ -3808,6 +3855,13 @@ export default {
             }
 
             if (this.dragType === this.DRAG_TYPES.ADD) {
+              // Skip slots at capacity when adding availability
+              if (
+                this.state === this.states.EDIT_AVAILABILITY &&
+                this.isSlotAtCapacity(date)
+              ) {
+                continue
+              }
               if (this.state === this.states.SET_SPECIFIC_TIMES) {
                 this.tempTimes.add(date.getTime())
               } else {
@@ -4004,6 +4058,32 @@ export default {
 
       // Dont start dragging if day not included in daysonly event
       if (this.event.daysOnly && !this.monthDayIncluded.get(date.getTime())) {
+        return
+      }
+
+      // Determine if this will be an add or remove operation
+      let willBeAdd = false
+      if (this.isSignUp) {
+        willBeAdd = true
+      } else if (
+        (this.state === this.states.SET_SPECIFIC_TIMES &&
+          this.tempTimes.has(date.getTime())) ||
+        (this.availabilityType === availabilityTypes.AVAILABLE &&
+          this.availability.has(date.getTime())) ||
+        (this.availabilityType === availabilityTypes.IF_NEEDED &&
+          this.ifNeeded.has(date.getTime()))
+      ) {
+        willBeAdd = false
+      } else {
+        willBeAdd = true
+      }
+
+      // Block adding availability if slot is at capacity
+      if (
+        willBeAdd &&
+        this.state === this.states.EDIT_AVAILABILITY &&
+        this.isSlotAtCapacity(date)
+      ) {
         return
       }
 
