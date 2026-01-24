@@ -5,7 +5,7 @@
     "dockerfilePath": "Dockerfile.backend"
   },
   "deploy": {
-    "healthcheckPath": "/api/auth/status",
+    "healthcheckPath": "/api/health",
     "healthcheckTimeout": 120
   }
 }

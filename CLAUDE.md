@@ -174,7 +174,7 @@ Swagger UI available at `/swagger/index.html` when backend is running.
 6. Click **"Deploy"** and wait for build to complete
 7. Go to **Settings → Networking → Generate Domain**
 8. **Copy your Railway URL** (e.g., `timeful-backend-production.up.railway.app`)
-9. **Verify deployment:** Visit `https://YOUR_RAILWAY_URL/api/auth/status` - should return JSON
+9. **Verify deployment:** Visit `https://YOUR_RAILWAY_URL/api/health` - should return `{"status":"ok"}`
 
 ---
 

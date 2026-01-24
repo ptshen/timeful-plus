@@ -28,6 +28,11 @@ func InitAuth(router *gin.RouterGroup) {
 	authRouter.POST("/sign-in-mobile", signInMobile)
 	authRouter.POST("/sign-out", signOut)
 	authRouter.GET("/status", middleware.AuthRequired(), getStatus)
+
+	// Health check endpoint (no auth required) for Railway/container healthchecks
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
 }
 
 // @Summary Signs user in
