@@ -52,26 +52,12 @@
     <meta name="msapplication-navbutton-color" content="#FFFFFF" />
     <!-- iOS Safari -->
     <meta name="apple-mobile-web-app-status-bar-style" content="#FFFFFF" />
-    <div style="display:none">
-    {{ $defaultTitle := "Timeful (formerly Schej) - Find a time to meet" }}
-    {{ $defaultDescription := "Timeful helps you find the best time for a group to meet. It is a free availability poll that is easy to use and integrates with your calendar." }}
-    {{ $defaultOgImage := "/img/ogImage.png" }}
-    </div>
-    <!-- <title>Timeful - Find a time to meet</title>
+    <title>Timeful (formerly Schej) - Find a time to meet</title>
     <meta name="description" content="Timeful helps you find the best time for a group to meet. It is a free availability poll that is easy to use and integrates with your calendar." />
-    <meta property="og:title" content="Timeful - Find a time to meet" />
+    <meta property="og:title" content="Timeful (formerly Schej) - Find a time to meet" />
     <meta property="og:description" content="Timeful helps you find the best time for a group to meet. It is a free availability poll that is easy to use and integrates with your calendar." />
     <meta property="og:image" content="/img/ogImage.png" />
-    <meta property="og:image:secure_url" content="/img/ogImage.png" /> -->
-    <title>{{ or .title $defaultTitle }}</title>
-    <meta 
-      name="description" 
-      content="{{or .description $defaultDescription }}" 
-    />
-    <meta property="og:title" content="{{or .ogTitle $defaultTitle}}" />
-    <meta property="og:description" content="{{or .ogDescription $defaultDescription }}" />
-    <meta property="og:image" content="{{or .ogImage $defaultOgImage }}" />
-    <meta property="og:image:secure_url" content="{{or .ogImage $defaultOgImage }}" />
+    <meta property="og:image:secure_url" content="/img/ogImage.png" />
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/@mdi/font@latest/css/materialdesignicons.min.css"
