@@ -6,6 +6,6 @@
   },
   "deploy": {
     "healthcheckPath": "/api/auth/status",
-    "healthcheckTimeout": 30
+    "healthcheckTimeout": 120
   }
 }

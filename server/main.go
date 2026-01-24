@@ -171,7 +171,12 @@ func main() {
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 
 	// Run server
-	router.Run(":3002")
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "3002"
+	}
+	logger.StdOut.Printf("Server starting on port %s\n", port)
+	router.Run(":" + port)
 }
 
 // Load .env variables
