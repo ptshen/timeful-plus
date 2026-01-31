@@ -46,7 +46,7 @@ export default {
     backgroundColor() {
       const capacity = this.signUpBlock ? this.signUpBlock.capacity : 1
       const frac = this.numberResponses / capacity
-      const green = "#00994C"
+      const green = "#5B92C8"
       let alpha = Math.floor(frac * (255 - 30))
         .toString(16)
         .toUpperCase()

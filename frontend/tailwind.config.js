@@ -16,12 +16,13 @@ module.exports = {
     colors: {
       transparent: "transparent",
       current: "currentColor",
-      "pale-green": "#CDEBDC",
-      "light-green": "#29BC68",
-      "ligher-green": "#EBF7EF",
-      green: "#00994C",
-      "dark-green": "#1C7D45",
-      "darkest-green": "#007F36",
+      // Columbia Blue theme (replacing green)
+      "pale-green": "#D4E8F7",      // pale blue
+      "light-green": "#75AADB",     // light Columbia blue
+      "ligher-green": "#EAF3FA",    // lighter blue
+      green: "#5B92C8",             // primary Columbia blue
+      "dark-green": "#3D6FA0",      // dark blue
+      "darkest-green": "#2C5A8A",   // darkest blue
       "light-blue": "#53A2FF",
       blue: "#006BE8",
       orange: "#E5A800",
@@ -35,7 +36,7 @@ module.exports = {
       "very-dark-gray": "#4F4F4F",
       "light-gray": "#f3f4f6",
       "light-gray-stroke": "#dfdfdf",
-      "avail-green": colors.emerald, // The green used for marking availability
+      "avail-green": colors.sky, // The color used for marking availability (now blue)
       red: "#DB1616",
     },
     screens: {

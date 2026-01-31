@@ -1,6 +1,5 @@
 <template>
   <v-app>
-    <DiscordBanner />
     <AutoSnackbar color="error" :text="error" />
     <AutoSnackbar color="tw-bg-blue" :text="info" />
     <SignInNotSupportedDialog v-model="webviewDialog" />
@@ -17,7 +16,6 @@
       @input="handleUpgradeDialogInput"
     />
     <UpvoteRedditSnackbar />
-    <CookieConsent />
     <div
       v-if="showHeader"
       class="tw-fixed tw-z-40 tw-h-14 tw-w-screen tw-border-b tw-border-gray-200 tw-bg-white sm:tw-h-16"
@@ -32,7 +30,7 @@
         <v-expand-x-transition>
           <span
             v-if="isPremiumUser"
-            class="tw-ml-2 tw-cursor-default tw-rounded-md tw-bg-[linear-gradient(-25deg,#0a483d,#00994c,#126045,#0a483d)] tw-px-2 tw-py-1 tw-text-sm tw-font-semibold tw-text-white tw-opacity-80"
+            class="tw-ml-2 tw-cursor-default tw-rounded-md tw-bg-[linear-gradient(-25deg,#2C5A8A,#5B92C8,#3D6FA0,#2C5A8A)] tw-px-2 tw-py-1 tw-text-sm tw-font-semibold tw-text-white tw-opacity-80"
           >
             Premium
           </span>
@@ -71,7 +69,7 @@
           color="primary"
           class="tw-mx-2 tw-rounded-md"
           :style="{
-            boxShadow: '0px 2px 8px 0px #00994C80 !important',
+            boxShadow: '0px 2px 8px 0px #5B92C880 !important',
           }"
           @click="() => _createNew()"
         >
@@ -252,8 +250,6 @@ import isWebview from "is-ua-webview"
 import NewDialog from "./components/NewDialog.vue"
 import UpgradeDialog from "@/components/pricing/UpgradeDialog.vue"
 import SignInDialog from "@/components/SignInDialog.vue"
-import DiscordBanner from "@/components/DiscordBanner.vue"
-import CookieConsent from "@/components/CookieConsent.vue"
 
 export default {
   name: "App",
@@ -273,8 +269,6 @@ export default {
     Logo,
     UpgradeDialog,
     SignInDialog,
-    DiscordBanner,
-    CookieConsent,
   },
 
   data: () => ({
