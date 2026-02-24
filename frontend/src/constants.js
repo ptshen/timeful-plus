@@ -30,6 +30,11 @@ export const eventTypes = Object.freeze({
   GROUP: "group",
 })
 
+export const signUpModes = Object.freeze({
+  TIME_SLOTS: "time_slots",
+  PROJECTS: "projects",
+})
+
 export const availabilityTypes = Object.freeze({
   AVAILABLE: "available",
   IF_NEEDED: "if_needed",

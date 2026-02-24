@@ -1,8 +1,8 @@
 <template>
   <v-card
     :flat="dialog"
-    :class="{ 'tw-py-4': !dialog, 'tw-flex-1': dialog }"
-    class="tw-relative tw-flex tw-max-w-[28rem] tw-flex-col tw-overflow-hidden tw-rounded-lg tw-transition-all"
+    :class="[{ 'tw-py-4': !dialog, 'tw-flex-1': dialog }, 'tw-max-w-[42rem] tw-w-full']"
+    class="tw-relative tw-flex tw-flex-col tw-overflow-hidden tw-rounded-lg tw-transition-all"
   >
     <v-card-title class="tw-mb-2 tw-flex tw-gap-2 tw-px-4 sm:tw-px-8">
       <div>
@@ -55,16 +55,21 @@
           required
         />
 
-        <!-- <SlideToggle
-          v-if="daysOnlyEnabled && !edit"
-          class="tw-w-full"
-          v-model="daysOnly"
-          :options="daysOnlyOptions"
-        /> -->
+        <div v-if="!lockSignUpMode" class="tw-flex tw-flex-col tw-gap-2">
+          <div class="tw-text-sm tw-text-very-dark-gray">Sign up type</div>
+          <SlideToggle v-model="signUpMode" :options="signUpModeOptions" />
+          <div
+            v-if="isProjectMode"
+            class="tw-text-xs tw-text-dark-gray"
+          >
+            Projects ignore dates and times. Add projects now and edit them
+            later.
+          </div>
+        </div>
 
         <div>
           <v-expand-transition>
-            <div v-if="!daysOnly">
+            <div v-if="!daysOnly && !isProjectMode">
               <div class="tw-mb-2 tw-text-lg tw-text-black">
                 What times might work?
               </div>
@@ -94,22 +99,31 @@
             </div>
           </v-expand-transition>
 
-          <div class="tw-mb-2 tw-text-lg tw-text-black">
-            What
-            {{ selectedDateOption === dateOptions.SPECIFIC ? "dates" : "days" }}
-            might work?
+          <div v-if="!isProjectMode">
+            <div class="tw-mb-2 tw-text-lg tw-text-black">
+              What
+              {{
+                selectedDateOption === dateOptions.SPECIFIC ? "dates" : "days"
+              }}
+              might work?
+            </div>
+            <v-select
+              v-if="!edit && !daysOnly"
+              v-model="selectedDateOption"
+              :items="Object.values(dateOptions)"
+              solo
+              hide-details
+              class="tw-mb-4"
+            />
           </div>
-          <v-select
-            v-if="!edit && !daysOnly"
-            v-model="selectedDateOption"
-            :items="Object.values(dateOptions)"
-            solo
-            hide-details
-            class="tw-mb-4"
-          />
 
           <v-expand-transition>
-            <div v-if="selectedDateOption === dateOptions.SPECIFIC || daysOnly">
+            <div
+              v-if="
+                !isProjectMode &&
+                (selectedDateOption === dateOptions.SPECIFIC || daysOnly)
+              "
+            >
               <div class="tw-mb-2 tw-text-xs tw-text-dark-gray">
                 Drag to select multiple dates
               </div>
@@ -125,7 +139,9 @@
                 />
               </v-input>
             </div>
-            <div v-else-if="selectedDateOption === dateOptions.DOW">
+            <div
+              v-else-if="!isProjectMode && selectedDateOption === dateOptions.DOW"
+            >
               <v-input
                 v-model="selectedDaysOfWeek"
                 hide-details="auto"
@@ -158,6 +174,79 @@
               </v-checkbox>
             </div>
           </v-expand-transition>
+        </div>
+
+        <div v-if="isProjectMode" class="tw-flex tw-flex-col tw-gap-3">
+          <div class="tw-text-lg tw-text-black">Projects</div>
+          <div class="tw-flex tw-flex-wrap tw-items-end tw-gap-2">
+            <div class="tw-flex tw-flex-col tw-gap-1">
+              <div class="tw-text-xs tw-text-dark-gray">Project name</div>
+              <v-text-field
+                v-model="newProjectName"
+                dense
+                hide-details
+                placeholder="e.g. Distance project"
+                class="tw-w-64"
+                @keyup.enter="addProject"
+              ></v-text-field>
+            </div>
+            <div class="tw-flex tw-flex-col tw-gap-1">
+              <div class="tw-text-xs tw-text-dark-gray">Capacity</div>
+              <v-select
+                v-model="newProjectCapacity"
+                :items="capacityOptions"
+                dense
+                hide-details
+                class="tw-w-28"
+              ></v-select>
+            </div>
+            <v-btn
+              class="tw-bg-green tw-text-white"
+              :disabled="!newProjectName.trim()"
+              @click="addProject"
+            >
+              Add project
+            </v-btn>
+          </div>
+
+          <div
+            v-if="projectBlocks.length > 0"
+            class="tw-flex tw-flex-col tw-gap-2"
+          >
+            <div
+              v-for="project in projectBlocks"
+              :key="project._id"
+              class="tw-grid tw-grid-cols-1 sm:tw-grid-cols-[minmax(0,1fr)_auto_auto] tw-items-center tw-gap-2 tw-rounded-md tw-border tw-border-light-gray-stroke tw-p-3"
+            >
+              <v-text-field
+                :value="project.name"
+                dense
+                hide-details
+                class="tw-w-full"
+                @input="updateProject(project, { name: $event })"
+              ></v-text-field>
+              <div class="tw-flex tw-items-center tw-gap-2">
+                <div class="tw-text-xs tw-text-dark-gray">People per project</div>
+                <v-select
+                  :value="project.capacity"
+                  :items="capacityOptions"
+                  dense
+                  hide-details
+                  class="tw-w-20"
+                  @input="updateProject(project, { capacity: $event })"
+                ></v-select>
+              </div>
+              <v-btn icon x-small @click="removeProject(project._id)">
+                <v-icon x-small>mdi-delete</v-icon>
+              </v-btn>
+            </div>
+          </div>
+          <div
+            v-else
+            class="tw-text-xs tw-italic tw-text-dark-gray"
+          >
+            Add at least one project to continue.
+          </div>
         </div>
 
         <v-checkbox v-model="notificationsEnabled" hide-details class="tw-mt-2">
@@ -340,7 +429,12 @@
 </style>
 
 <script>
-import { eventTypes, dayIndexToDayString, authTypes } from "@/constants"
+import {
+  eventTypes,
+  dayIndexToDayString,
+  authTypes,
+  signUpModes,
+} from "@/constants"
 import {
   post,
   put,
@@ -379,6 +473,8 @@ export default {
     dialog: { type: Boolean, default: true },
     contactsPayload: { type: Object, default: () => ({}) },
     showHelp: { type: Boolean, default: false },
+    initialSignUpMode: { type: String, default: null },
+    lockSignUpMode: { type: Boolean, default: false },
   },
 
   components: {
@@ -402,6 +498,15 @@ export default {
     selectedDaysOfWeek: [],
     startOnMonday: false,
     notificationsEnabled: false,
+    signUpMode: signUpModes.TIME_SLOTS,
+    signUpModeOptions: Object.freeze([
+      { text: "Time Slot", value: signUpModes.TIME_SLOTS },
+      { text: "Projects", value: signUpModes.PROJECTS },
+    ]),
+    capacityOptions: [...Array(100).keys()].map((i) => i + 1),
+    projectBlocks: [],
+    newProjectName: "",
+    newProjectCapacity: 1,
 
     daysOnly: false,
     daysOnlyOptions: Object.freeze([
@@ -437,6 +542,10 @@ export default {
   }),
 
   mounted() {
+    if (this.initialSignUpMode && !this.event) {
+      this.signUpMode = this.initialSignUpMode
+    }
+
     if (Object.keys(this.contactsPayload).length > 0) {
       this.toggleEmailReminders(true)
 
@@ -465,10 +574,14 @@ export default {
       return [(v) => !!v || "Event name is required"]
     },
     selectedDaysRules() {
+      if (this.isProjectMode) return []
       return [
         (selectedDays) =>
           selectedDays.length > 0 || "Please select at least one day",
       ]
+    },
+    isProjectMode() {
+      return this.signUpMode === signUpModes.PROJECTS
     },
     addedEmails() {
       if (Object.keys(this.contactsPayload).length > 0)
@@ -511,6 +624,10 @@ export default {
       this.notificationsEnabled = false
       this.daysOnly = false
       this.selectedDateOption = "Specific dates"
+      this.signUpMode = this.initialSignUpMode || signUpModes.TIME_SLOTS
+      this.projectBlocks = []
+      this.newProjectName = ""
+      this.newProjectCapacity = 1
       this.emails = []
       this.showAdvancedOptions = false
       this.blindAvailabilityEnabled = false
@@ -520,8 +637,38 @@ export default {
 
       this.$refs.form.resetValidation()
     },
+    addProject() {
+      const name = this.newProjectName.trim()
+      if (!name) return
+
+      this.projectBlocks.push({
+        _id: this.generateLocalId(),
+        name,
+        capacity: this.newProjectCapacity,
+      })
+      this.newProjectName = ""
+      this.newProjectCapacity = 1
+    },
+    removeProject(projectId) {
+      this.projectBlocks = this.projectBlocks.filter(
+        (project) => project._id !== projectId
+      )
+    },
+    updateProject(project, updates) {
+      this.projectBlocks = this.projectBlocks.map((p) =>
+        p._id === project._id ? { ...p, ...updates } : p
+      )
+    },
+    generateLocalId() {
+      return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    },
     submit() {
       if (!this.$refs.form.validate()) return
+
+      if (this.isProjectMode && this.projectBlocks.length === 0) {
+        this.showError("Please add at least one project.")
+        return
+      }
 
       this.selectedDays.sort()
 
@@ -532,7 +679,14 @@ export default {
       // Get date objects for each selected day
       let dates = []
       let type = ""
-      if (this.daysOnly) {
+      if (this.isProjectMode) {
+        duration = 0
+        this.daysOnly = true
+        type = eventTypes.SPECIFIC_DATES
+        const today = getISODateString(new Date(), true)
+        const date = new Date(`${today} 00:00:00Z`)
+        dates = [date]
+      } else if (this.daysOnly) {
         duration = 0
         type = eventTypes.SIGNUP
 
@@ -581,6 +735,14 @@ export default {
         notificationsEnabled: this.notificationsEnabled,
         blindAvailabilityEnabled: this.blindAvailabilityEnabled,
         daysOnly: this.daysOnly,
+        signUpMode: this.signUpMode,
+        signUpBlocks: this.isProjectMode
+          ? this.projectBlocks.map((project) => ({
+              _id: project._id,
+              name: project.name,
+              capacity: project.capacity,
+            }))
+          : undefined,
         remindees: this.emails,
         type: type,
         isSignUpForm: true,
@@ -601,6 +763,8 @@ export default {
         eventRemindees: this.emails,
         eventType: type,
         eventIsSignUpForm: true,
+        eventSignUpMode: this.signUpMode,
+        eventSignUpBlocksCount: this.projectBlocks.length,
         eventSendEmailAfterXResponses: this.sendEmailAfterXResponsesEnabled
           ? parseInt(this.sendEmailAfterXResponses)
           : -1,
@@ -705,6 +869,17 @@ export default {
     updateFieldsFromEvent() {
       if (this.event) {
         this.name = this.event.name
+        this.signUpMode =
+          this.event.signUpMode || this.initialSignUpMode || signUpModes.TIME_SLOTS
+        if (this.signUpMode === signUpModes.PROJECTS) {
+          this.projectBlocks = (this.event.signUpBlocks ?? []).map((block) => ({
+            _id: block._id,
+            name: block.name,
+            capacity: block.capacity ?? 1,
+          }))
+        } else {
+          this.projectBlocks = []
+        }
 
         // Set start time, accounting for the timezone
         this.startTime = Math.floor(
@@ -780,6 +955,8 @@ export default {
         blindAvailabilityEnabled: this.blindAvailabilityEnabled,
         sendEmailAfterXResponsesEnabled: this.sendEmailAfterXResponsesEnabled,
         sendEmailAfterXResponses: this.sendEmailAfterXResponses,
+        signUpMode: this.signUpMode,
+        projectBlocks: [...this.projectBlocks],
       }
     },
     hasEventBeenEdited() {
@@ -802,18 +979,35 @@ export default {
         this.sendEmailAfterXResponsesEnabled !==
           this.initialEventData.sendEmailAfterXResponsesEnabled ||
         this.sendEmailAfterXResponses !==
-          this.initialEventData.sendEmailAfterXResponses
+          this.initialEventData.sendEmailAfterXResponses ||
+        this.signUpMode !== this.initialEventData.signUpMode ||
+        JSON.stringify(this.projectBlocks) !==
+          JSON.stringify(this.initialEventData.projectBlocks)
       )
     },
   },
 
   watch: {
+    initialSignUpMode: {
+      immediate: true,
+      handler(newMode) {
+        if (!newMode) return
+        if (!this.event || this.lockSignUpMode) {
+          this.signUpMode = newMode
+        }
+      },
+    },
     event: {
       immediate: true,
       handler() {
         this.updateFieldsFromEvent()
         this.setInitialEventData()
       },
+    },
+    signUpMode(newMode) {
+      if (this.lockSignUpMode && this.initialSignUpMode && newMode !== this.initialSignUpMode) {
+        this.signUpMode = this.initialSignUpMode
+      }
     },
     selectedDateOption() {
       // Reset the other date / day selection when date option is changed

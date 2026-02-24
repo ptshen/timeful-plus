@@ -26,7 +26,7 @@ export default new Vuex.Store({
 
     // Feature flags
     groupsEnabled: true,
-    signUpFormEnabled: false,
+    signUpFormEnabled: true,
     daysOnlyEnabled: true,
     overlayAvailabilitiesEnabled: true,
     enablePaywall: true,

@@ -71,6 +71,7 @@ type Event struct {
 
 	// Sign up form details
 	IsSignUpForm    *bool                      `json:"isSignUpForm" bson:"isSignUpForm,omitempty"`
+	SignUpMode      *string                    `json:"signUpMode" bson:"signUpMode,omitempty"`
 	SignUpBlocks    *[]SignUpBlock             `json:"signUpBlocks" bson:"signUpBlocks,omitempty"`
 	SignUpResponses map[string]*SignUpResponse `json:"signUpResponses" bson:"signUpResponses"`
 

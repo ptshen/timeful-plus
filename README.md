@@ -92,6 +92,12 @@ See [DOCKER.md](./DOCKER.md) for complete self-hosting instructions, including:
 - Troubleshooting tips
 - Podman support with Quadlets
 
+### Modal Hosting (Backend)
+
+If you want to host only the backend on Modal (long-running web service), see
+[MODAL.md](./MODAL.md). It includes the Modal entrypoint, env var template,
+and deploy steps.
+
 ### Requirements
 
 - Docker (version 20.10+) or Podman

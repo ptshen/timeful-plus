@@ -65,7 +65,20 @@
           :contactsPayload="this.type == 'group' ? contactsPayload : {}"
         />
         <NewSignUp
-          v-if="tab === 'signup'"
+          v-else-if="tab === 'signup_projects'"
+          ref="signup_projects"
+          :key="`signup-projects-${value}`"
+          :event="event"
+          :edit="edit"
+          @input="handleDialogInput"
+          :show-help="!_noTabs"
+          :folder-id="folderId"
+          :contactsPayload="isSignupType(type) ? contactsPayload : {}"
+          :initialSignUpMode="'projects'"
+          lockSignUpMode
+        />
+        <NewSignUp
+          v-else-if="tab === 'signup'"
           ref="signup"
           :key="`signup-${value}`"
           :event="event"
@@ -73,7 +86,7 @@
           @input="handleDialogInput"
           :show-help="!_noTabs"
           :folder-id="folderId"
-          :contactsPayload="this.type == 'signup' ? contactsPayload : {}"
+          :contactsPayload="isSignupType(type) ? contactsPayload : {}"
         />
       </template>
     </v-card>
@@ -114,9 +127,8 @@ export default {
     return {
       tab: this.type,
       tabs: [
-        { title: "Event", type: "event" },
-        { title: "Sign up form", type: "signup" },
-        { title: "Availability group", type: "group" },
+        { title: "Time Slot", type: "event" },
+        { title: "Projects", type: "signup_projects" },
       ],
 
       unsavedChangesDialog: false,
@@ -139,7 +151,8 @@ export default {
 
   methods: {
     handleDialogInput() {
-      if (!this.edit || !this.$refs[this.tab].hasEventBeenEdited()) {
+      const activeForm = this.$refs[this.tab]
+      if (!this.edit || !activeForm?.hasEventBeenEdited?.()) {
         this.exitDialog()
       } else {
         this.unsavedChangesDialog = true
@@ -147,8 +160,33 @@ export default {
     },
     exitDialog() {
       this.$emit("input", false)
-      if (this.edit) this.$refs[this.tab].resetToEventData()
-      else this.$refs[this.tab].reset()
+      const activeForm = this.$refs[this.tab]
+      if (!activeForm) return
+      if (this.edit) activeForm.resetToEventData()
+      else activeForm.reset()
+    },
+    isSignupType(type) {
+      return (
+        type === "signup" ||
+        type === "signup_projects"
+      )
+    },
+    getDefaultTabForType(type = this.type) {
+      if (type === "signup") {
+        if (this.event?.signUpMode === "projects") return "signup_projects"
+        return "signup"
+      }
+      if (type === "signup_time_slots") {
+        return "signup"
+      }
+      return type
+    },
+    buildTabs() {
+      const tabs = [{ title: "Time Slot", type: "event" }]
+      if (this.signUpFormEnabled) {
+        tabs.push({ title: "Projects", type: "signup_projects" })
+      }
+      this.tabs = tabs
     },
   },
 
@@ -156,23 +194,13 @@ export default {
     groupsEnabled: {
       immediate: true,
       handler() {
-        this.tabs = [
-          { title: "Event", type: "event" },
-          { title: "Sign up form", type: "signup" },
-        ]
-        if (this.groupsEnabled) {
-          this.tabs.push({ title: "Availability group", type: "group" })
-        }
+        this.buildTabs()
       },
     },
     signUpFormEnabled: {
       immediate: true,
       handler() {
-        this.tabs = [{ title: "Event", type: "event" }]
-        if (this.signUpFormEnabled) {
-          this.tabs.push({ title: "Sign up form", type: "signup" })
-        }
-        this.tabs.push({ title: "Availability group", type: "group" })
+        this.buildTabs()
       },
     },
     value: {
@@ -180,14 +208,14 @@ export default {
       handler() {
         if (this.value) {
           // Reset tab to the type prop when dialog is opened
-          this.tab = this.type
+          this.tab = this.getDefaultTabForType(this.type)
         }
       },
     },
     type: {
       immediate: true,
       handler() {
-        this.tab = this.type
+        this.tab = this.getDefaultTabForType(this.type)
       },
     },
   },

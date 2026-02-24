@@ -44,6 +44,7 @@ type CreateEventRequest struct {
 
 	// Only for sign up form events
 	IsSignUpForm *bool                 `json:"isSignUpForm"`
+	SignUpMode   *string               `json:"signUpMode"`
 	SignUpBlocks *[]models.SignUpBlock `json:"signUpBlocks"`
 
 	// Only for events (not groups)
@@ -79,6 +80,7 @@ type EditEventRequest struct {
 	Location    *string `json:"location"`
 
 	// Only for sign up form events
+	SignUpMode   *string               `json:"signUpMode"`
 	SignUpBlocks *[]models.SignUpBlock `json:"signUpBlocks"`
 
 	// Only for events (not groups)
@@ -165,6 +167,7 @@ func createEvent(c *gin.Context) {
 		HasSpecificTimes:         payload.HasSpecificTimes,
 		Times:                    payload.Times,
 		IsSignUpForm:             payload.IsSignUpForm,
+		SignUpMode:               payload.SignUpMode,
 		SignUpBlocks:             payload.SignUpBlocks,
 		StartOnMonday:            payload.StartOnMonday,
 		NotificationsEnabled:     payload.NotificationsEnabled,
@@ -341,6 +344,7 @@ func editEvent(c *gin.Context) {
 	event.Dates = payload.Dates
 	event.Times = payload.Times
 	event.HasSpecificTimes = payload.HasSpecificTimes
+	event.SignUpMode = payload.SignUpMode
 	event.SignUpBlocks = payload.SignUpBlocks
 	event.StartOnMonday = payload.StartOnMonday
 	event.NotificationsEnabled = payload.NotificationsEnabled

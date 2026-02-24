@@ -2993,6 +2993,7 @@ export default {
         duration: this.event.duration,
         dates: this.event.dates,
         type: this.event.type,
+        signUpMode: this.event.signUpMode,
         signUpBlocks: this.signUpBlocksByDay.flat().map((block) => {
           return {
             _id: block._id,

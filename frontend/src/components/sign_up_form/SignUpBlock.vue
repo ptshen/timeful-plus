@@ -38,7 +38,10 @@
         </v-btn>
       </div>
     </div>
-    <div class="tw-text-xs tw-italic tw-text-dark-gray">
+    <div
+      v-if="hasTimeRange"
+      class="tw-text-xs tw-italic tw-text-dark-gray"
+    >
       {{ timeRangeString }}
     </div>
     <div v-if="isOwner" class="tw-mt-4 tw-flex tw-items-center tw-gap-4">
@@ -134,10 +137,14 @@ export default {
   computed: {
     ...mapState(["authUser"]),
     timeRangeString() {
+      if (!this.hasTimeRange) return ""
       return getStartEndDateString(
         this.signUpBlock.startDate,
         this.signUpBlock.endDate
       )
+    },
+    hasTimeRange() {
+      return Boolean(this.signUpBlock.startDate && this.signUpBlock.endDate)
     },
     hasCapacity() {
       return (

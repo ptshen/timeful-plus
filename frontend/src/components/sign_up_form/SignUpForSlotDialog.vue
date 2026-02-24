@@ -7,7 +7,10 @@
   >
     <v-card>
       <v-card-title class="tw-flex">
-        <div>Join slot <span v-if="!authUser">as</span></div>
+        <div>
+          Join {{ signUpNoun }}
+          <span v-if="!authUser">as</span>
+        </div>
         <v-spacer />
         <v-btn icon @click="$emit('input', false)">
           <v-icon>mdi-close</v-icon>
@@ -49,7 +52,7 @@
           </div>
 
           <div>
-            NOTE: After joining a slot,
+            NOTE: After joining a {{ signUpNoun }},
             <span class="tw-font-bold"
               >you will need to contact the sign up creator in order to edit
               your slot.</span
@@ -71,7 +74,7 @@
               :dark="formValid"
               :disabled="!formValid"
             >
-              Join slot
+              Join {{ signUpNoun }}
             </v-btn>
           </div>
         </v-form>
@@ -113,6 +116,9 @@ export default {
     ...mapState(["authUser"]),
     isPhone() {
       return isPhone(this.$vuetify)
+    },
+    signUpNoun() {
+      return this.event?.signUpMode === "projects" ? "project" : "slot"
     },
   },
 

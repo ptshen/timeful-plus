@@ -244,26 +244,34 @@
 
         <!-- Calendar -->
 
-        <ScheduleOverlap
-          ref="scheduleOverlap"
-          :event="event"
-          :fromEditEvent="fromEditEvent"
-          :loadingCalendarEvents="loading"
-          :calendarEventsMap="calendarEventsMap"
-          :calendarPermissionGranted="calendarPermissionGranted"
-          :calendar-availabilities="calendarAvailabilities"
-          :weekOffset.sync="weekOffset"
-          :curGuestId="curGuestId"
-          :initial-timezone="initialTimezone"
-          :addingAvailabilityAsGuest="addingAvailabilityAsGuest"
-          @addAvailability="addAvailability"
-          @addAvailabilityAsGuest="addAvailabilityAsGuest"
-          @refreshEvent="refreshEvent"
-          @highlightAvailabilityBtn="highlightAvailabilityBtn"
-          @deleteAvailability="deleteAvailability"
-          @setCurGuestId="(id) => (curGuestId = id)"
-          @signUpForBlock="initiateSignUpFlow"
-        />
+          <ProjectSignUp
+            v-if="isProjectSignUp"
+            ref="scheduleOverlap"
+            :event="event"
+            @signUpForBlock="initiateSignUpFlow"
+            @refreshEvent="refreshEvent"
+          />
+          <ScheduleOverlap
+            v-else
+            ref="scheduleOverlap"
+            :event="event"
+            :fromEditEvent="fromEditEvent"
+            :loadingCalendarEvents="loading"
+            :calendarEventsMap="calendarEventsMap"
+            :calendarPermissionGranted="calendarPermissionGranted"
+            :calendar-availabilities="calendarAvailabilities"
+            :weekOffset.sync="weekOffset"
+            :curGuestId="curGuestId"
+            :initial-timezone="initialTimezone"
+            :addingAvailabilityAsGuest="addingAvailabilityAsGuest"
+            @addAvailability="addAvailability"
+            @addAvailabilityAsGuest="addAvailabilityAsGuest"
+            @refreshEvent="refreshEvent"
+            @highlightAvailabilityBtn="highlightAvailabilityBtn"
+            @deleteAvailability="deleteAvailability"
+            @setCurGuestId="(id) => (curGuestId = id)"
+            @signUpForBlock="initiateSignUpFlow"
+          />
       </div>
 
       <template v-if="showFeedbackBtn">
@@ -393,6 +401,7 @@ import { mapActions, mapState, mapMutations } from "vuex"
 
 import NewDialog from "@/components/NewDialog.vue"
 import ScheduleOverlap from "@/components/schedule_overlap/ScheduleOverlap.vue"
+import ProjectSignUp from "@/components/sign_up_form/ProjectSignUp.vue"
 import GuestDialog from "@/components/GuestDialog.vue"
 import SignUpForSlotDialog from "@/components/sign_up_form/SignUpForSlotDialog.vue"
 import { errors, authTypes, eventTypes, calendarTypes } from "@/constants"
@@ -418,6 +427,7 @@ export default {
     GuestDialog,
     SignUpForSlotDialog,
     ScheduleOverlap,
+    ProjectSignUp,
     NewDialog,
     SignInNotSupportedDialog,
     MarkAvailabilityDialog,
@@ -479,6 +489,7 @@ export default {
       return calendarTypes
     },
     dateString() {
+      if (this.isProjectSignUp) return "Project sign up"
       return getDateRangeStringForEvent(this.event)
     },
     isEditing() {
@@ -507,6 +518,9 @@ export default {
     isSignUp() {
       return this.event?.isSignUpForm
     },
+    isProjectSignUp() {
+      return this.isSignUp && this.event?.signUpMode === "projects"
+    },
     eventType() {
       if (this.isGroup) return "group"
       else if (this.isSignUp) return "signup"
@@ -528,6 +542,7 @@ export default {
       return this.scheduleOverlapComponent?.respondents.length
     },
     actionButtonText() {
+      if (this.isProjectSignUp) return "Edit projects"
       if (this.isSignUp) return "Edit slots"
       else if (this.userHasResponded || this.isGroup) return "Edit availability"
       return "Add availability"
@@ -538,6 +553,7 @@ export default {
         : `Edit ${this.selectedGuestRespondent}'s availability`
     },
     mobileActionButtonText() {
+      if (this.isProjectSignUp) return "Edit projects"
       if (this.isSignUp) return "Edit slots"
       return this.userHasResponded ? "Edit availability" : "Add availability"
     },
@@ -911,7 +927,8 @@ export default {
             this.isEditing &&
             !this.userHasResponded &&
             !this.areUnsavedChanges &&
-            this.scheduleOverlapComponent
+            this.scheduleOverlapComponent &&
+            !this.isSignUp
           ) {
             this.$nextTick(() => {
               this.scheduleOverlapComponent?.setAvailabilityAutomatically()

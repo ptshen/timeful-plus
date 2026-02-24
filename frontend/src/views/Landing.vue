@@ -59,7 +59,7 @@
     <SignInDialog v-model="signInDialog" @signIn="_signIn" />
 
     <!-- New event dialog -->
-    <NewDialog v-model="newDialog" no-tabs @signIn="signIn" />
+    <NewDialog v-model="newDialog" @signIn="signIn" />
   </div>
 </template>
 
