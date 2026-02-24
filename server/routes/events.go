@@ -97,6 +97,18 @@ type EditEventRequest struct {
 	Attendees []string `json:"attendees"`
 }
 
+func ensureSignUpBlockIDs(blocks *[]models.SignUpBlock) {
+	if blocks == nil {
+		return
+	}
+
+	for i := range *blocks {
+		if (*blocks)[i].Id == primitive.NilObjectID {
+			(*blocks)[i].Id = primitive.NewObjectID()
+		}
+	}
+}
+
 func InitEvents(router *gin.RouterGroup) {
 	eventRouter := router.Group("/events")
 
@@ -128,6 +140,7 @@ func createEvent(c *gin.Context) {
 		fmt.Println(err)
 		return
 	}
+	ensureSignUpBlockIDs(payload.SignUpBlocks)
 
 	// Validate field lengths
 	if payload.Description != nil && len(*payload.Description) > 5000 {
@@ -299,6 +312,7 @@ func editEvent(c *gin.Context) {
 		logger.StdErr.Println(err)
 		return
 	}
+	ensureSignUpBlockIDs(payload.SignUpBlocks)
 
 	// Validate field lengths
 	if payload.Description != nil && len(*payload.Description) > 5000 {

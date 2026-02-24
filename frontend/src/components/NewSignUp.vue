@@ -459,6 +459,7 @@ import dayjs from "dayjs"
 import utcPlugin from "dayjs/plugin/utc"
 import timezonePlugin from "dayjs/plugin/timezone"
 import ExpandableSection from "./ExpandableSection.vue"
+import ObjectID from "bson-objectid"
 dayjs.extend(utcPlugin)
 dayjs.extend(timezonePlugin)
 
@@ -660,7 +661,7 @@ export default {
       )
     },
     generateLocalId() {
-      return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      return ObjectID().toString()
     },
     submit() {
       if (!this.$refs.form.validate()) return
