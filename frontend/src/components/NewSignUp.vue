@@ -777,13 +777,17 @@ export default {
         // Create new event on backend
         post("/events", payload)
           .then(({ eventId, shortId }) => {
+            const routeParams = {
+              signUpId: shortId ?? eventId,
+              initialTimezone: this.timezone,
+            }
+            if (!this.isProjectMode) {
+              routeParams.editingMode = true
+            }
+
             this.$router.push({
               name: "signUp",
-              params: {
-                signUpId: shortId ?? eventId,
-                initialTimezone: this.timezone,
-                editingMode: true,
-              },
+              params: routeParams,
             })
 
             this.$emit("input", false)

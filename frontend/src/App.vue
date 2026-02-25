@@ -293,11 +293,7 @@ export default {
       return isPhone(this.$vuetify)
     },
     showHeader() {
-      return (
-        this.$route.name !== "landing" &&
-        this.$route.name !== "auth" &&
-        this.$route.name !== "privacy-policy"
-      )
+      return false
     },
     showFeedbackBtn() {
       return !this.isPhone || this.$route.name === "home"
